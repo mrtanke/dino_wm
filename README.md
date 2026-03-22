@@ -29,15 +29,38 @@ Code adapters for these encoders:
 ## 1. Setup
 
 ```bash
-git clone https://github.com/gaoyuezhou/dino_wm.git
+git clone https://github.com/mrtanke/dino_wm.git
 cd dino_wm
 conda env create -f environment.yaml
 conda activate dino_wm
 ```
 
-Install MuJoCo following your platform-specific instructions.
+### Install Mujoco
 
-For normal Ubuntu/Linux usage, `environment.yaml` is already aligned with the original repo setup.
+Create the `.mujoco` directory and download Mujoco210 using `wget`:
+
+```bash
+mkdir -p ~/.mujoco
+wget https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz -P ~/.mujoco/
+cd ~/.mujoco
+tar -xzvf mujoco210-linux-x86_64.tar.gz
+```
+
+Append the following lines to your `~/.bashrc`:
+
+```bash
+# Mujoco Path. Replace `<username>` with your actual username if necessary.
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/<username>/.mujoco/mujoco210/bin
+
+# NVIDIA Library Path (if using NVIDIA GPUs)
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
+```
+
+Reload your shell configuration to apply the environment variable changes:
+
+```bash
+source ~/.bashrc
+```
 
 ## 2. Configure Data and Checkpoints
 
@@ -109,10 +132,6 @@ Note: if a model hub identifier changes, update `model_name` field in the corres
 ```bash
 python plan.py --config-name plan_pusht.yaml model_name=<your_model_name>
 ```
-
-## Optional: Windows Note
-
-If you run this on Windows, use WSL2 for best compatibility with the Linux-first dependency stack.
 
 ## Citation
 
