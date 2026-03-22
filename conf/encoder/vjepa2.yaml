@@ -1,0 +1,7 @@
+_target_: models.vjepa2.VJEPA2Encoder
+model_name: "facebook/vjepa2-vitl16"
+feature_key: "last_hidden_state"
+use_cls_token: False
+patch_size: 16
+trust_remote_code: True
+normalize: False

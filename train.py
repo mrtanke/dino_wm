@@ -2,6 +2,7 @@ import os
 import time
 import hydra
 import torch
+import torch.nn.functional as F
 import wandb
 import logging
 import warnings
@@ -202,6 +203,39 @@ class Trainer:
         if len(not_in_ckpt):
             log.warning("Keys not found in ckpt: %s", not_in_ckpt)
 
+    def _prepare_encoder_input_for_shape_probe(self, visual):
+        # Keep shape probing consistent with VisualWorldModel preprocessing.
+        if "dino" in self.encoder.name:
+            decoder_scale = 16
+            num_side_patches = self.cfg.img_size // decoder_scale
+            encoder_image_size = num_side_patches * self.encoder.patch_size
+            visual = F.interpolate(
+                visual,
+                size=(encoder_image_size, encoder_image_size),
+                mode="bilinear",
+                align_corners=False,
+            )
+        return visual
+
+    def _infer_encoder_latent_shape(self):
+        sample_obs, _, _ = self.datasets["train"][0]
+        visual = sample_obs["visual"][0].unsqueeze(0)
+        visual = self._prepare_encoder_input_for_shape_probe(visual)
+
+        with torch.no_grad():
+            sample_tokens = self.encoder(visual)
+
+        if sample_tokens.ndim == 2:
+            sample_tokens = sample_tokens.unsqueeze(1)
+        if sample_tokens.ndim != 3:
+            raise ValueError(
+                f"Unsupported encoder probe output shape: {tuple(sample_tokens.shape)}"
+            )
+
+        num_patches = int(sample_tokens.shape[1])
+        emb_dim = int(sample_tokens.shape[2])
+        return num_patches, emb_dim
+
     def init_models(self):
         model_ckpt = Path(self.cfg.saved_folder) / "checkpoints" / "model_latest.pth"
         if model_ckpt.exists():
@@ -241,12 +275,13 @@ class Trainer:
             self.wandb_run.watch(self.proprio_encoder)
 
         # initialize predictor
-        if self.encoder.latent_ndim == 1:  # if feature is 1D
-            num_patches = 1
-        else:
-            decoder_scale = 16  # from vqvae
-            num_side_patches = self.cfg.img_size // decoder_scale
-            num_patches = num_side_patches**2
+        num_patches, encoder_emb_dim = self._infer_encoder_latent_shape()
+        log.info(
+            "Encoder latent probe: num_patches=%d emb_dim=%d encoder=%s",
+            num_patches,
+            encoder_emb_dim,
+            self.encoder.name,
+        )
 
         if self.cfg.concat_dim == 0:
             num_patches += 2
@@ -257,7 +292,7 @@ class Trainer:
                     self.cfg.predictor,
                     num_patches=num_patches,
                     num_frames=self.cfg.num_hist,
-                    dim=self.encoder.emb_dim
+                    dim=encoder_emb_dim
                     + (
                         proprio_emb_dim * self.cfg.num_proprio_repeat
                         + action_emb_dim * self.cfg.num_action_repeat
@@ -284,7 +319,7 @@ class Trainer:
                 else:
                     self.decoder = hydra.utils.instantiate(
                         self.cfg.decoder,
-                        emb_dim=self.encoder.emb_dim,  # 384
+                        emb_dim=encoder_emb_dim,
                     )
             if not self.train_decoder:
                 for param in self.decoder.parameters():
