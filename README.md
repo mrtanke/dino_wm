@@ -7,6 +7,24 @@ Removed from the default workflow:
 - wall_single
 - deformable environments
 
+### Install Mujoco
+Create the `.mujoco` directory and download Mujoco210 using `wget`:
+
+```bash
+mkdir -p ~/.mujoco
+wget https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz -P ~/.mujoco/
+cd ~/.mujoco
+tar -xzvf mujoco210-linux-x86_64.tar.gz
+```
+
+### Download Data and Checkpoints
+
+```bash
+wget -O dataset_pointmaze.zip "https://huggingface.co/datasets/revennn/dino_wm/resolve/main/dataset_pointmaze.zip"
+```
+
+After downloading, unzip the `dataset_pointmaze.zip` and the `point_maze.zip` inside.
+
 ### Container Layout
 
 Expected mounted paths in the container:
