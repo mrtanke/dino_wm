@@ -98,23 +98,34 @@ class Transformer(nn.Module):
         return self.norm(x)
     
 class ViTPredictor(nn.Module):
-    def __init__(self, *, num_patches, num_frames, dim, depth, heads, mlp_dim, pool='cls', dim_head=64, dropout=0., emb_dropout=0.):
+    def __init__(self, *, num_patches, num_frames, dim, depth, heads, mlp_dim, pool='cls', dim_head=64, dropout=0., emb_dropout=0., model_dim=None):
         super().__init__()
         assert pool in {'cls', 'mean'}, 'pool type must be either cls (cls token) or mean (mean pooling)'
+
+        self.input_dim = dim
+        self.model_dim = dim if model_dim is None else model_dim
         
         # update params for adding causal attention masks
         global NUM_FRAMES, NUM_PATCHES
         NUM_FRAMES = num_frames
         NUM_PATCHES = num_patches
 
-        self.pos_embedding = nn.Parameter(torch.randn(1, num_frames * (num_patches), dim)) # dim for the pos encodings
+        self.in_proj = nn.Identity()
+        self.out_proj = nn.Identity()
+        if self.model_dim != self.input_dim:
+            self.in_proj = nn.Linear(self.input_dim, self.model_dim)
+            self.out_proj = nn.Linear(self.model_dim, self.input_dim)
+
+        self.pos_embedding = nn.Parameter(torch.randn(1, num_frames * (num_patches), self.model_dim)) # dim for the pos encodings
         self.dropout = nn.Dropout(emb_dropout)
-        self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim, dropout)
+        self.transformer = Transformer(self.model_dim, depth, heads, dim_head, mlp_dim, dropout)
         self.pool = pool
 
     def forward(self, x): # x: (b, window_size * H/patch_size * W/patch_size, 384)
         b, n, _ = x.shape
+        x = self.in_proj(x)
         x = x + self.pos_embedding[:, :n]
         x = self.dropout(x) 
         x = self.transformer(x) 
+        x = self.out_proj(x)
         return x

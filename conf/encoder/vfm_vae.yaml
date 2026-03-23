@@ -1,7 +1,7 @@
-_target_: models.vfm_vae.VFMVAEEncoder
-model_name: "facebook/vfm-vae-vitl16"
-feature_key: "last_hidden_state"
-use_cls_token: False
-patch_size: 16
-trust_remote_code: True
-normalize: False
+_target_: models.hf_encoders.VFMVAEEncoder
+model_name_or_path: ${oc.env:VFMVAE_MODEL_ID,facebook/vfm-vae-vitl16}
+token_pool: patch
+feature_key: last_hidden_state
+drop_cls_token: true
+trust_remote_code: true
+normalize_imagenet: true

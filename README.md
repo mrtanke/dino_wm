@@ -1,148 +1,148 @@
-# DINO_WM (PushT-Only)
+# DINO-WM PointMaze Workflow
 
-[Paper](https://arxiv.org/abs/2411.04983) | [Homepage](https://dino-wm.github.io/) | [Github](https://github.com/gaoyuezhou/dino_wm)
+This repo is now configured for a PointMaze-only workflow.
 
-This repo is configured for PushT-only experiments.
+Removed from the default workflow:
+- PushT
+- wall_single
+- deformable environments
 
-The high-level world-model pipeline is:
+## Container Layout
 
-`image encoder -> latent transition model -> planning`
+Expected mounted paths in the container:
+- repo: `/workspace`
+- dataset: `/data`
+- checkpoints: `/checkpoints`
+- MuJoCo: `/root/.mujoco`
 
-## Representation Ablation Scope
+The configs are aligned with this layout:
+- `conf/train.yaml`: `ckpt_base_path=/checkpoints`
+- `conf/plan.yaml`: `ckpt_base_path=/checkpoints`
+- `conf/plan_point_maze.yaml`: `ckpt_base_path=/checkpoints`
 
-Baseline:
-- DINOv2 patch tokens (`conf/encoder/dino.yaml`)
+## 1) Build Docker Image
 
-New encoder configs added for representation study:
-- V-JEPA 2 (`conf/encoder/vjepa2.yaml`)
-- DINOv3 (`conf/encoder/dinov3.yaml`)
-- DINO-Tok (`conf/encoder/dinotok.yaml`)
-- VFM-VAE (`conf/encoder/vfm_vae.yaml`)
-
-Code adapters for these encoders:
-- `models/vjepa2.py`
-- `models/dinov3.py`
-- `models/dinotok.py`
-- `models/vfm_vae.py`
-- shared helper: `models/hf_vision.py`
-
-## 1. Setup
+From local repo directory:
 
 ```bash
-git clone https://github.com/mrtanke/dino_wm.git
-cd dino_wm
-conda env create -f environment.yaml
-conda activate dino_wm
+docker build -t dino-wm-pointmaze .
 ```
 
-### Install Mujoco
-
-Create the `.mujoco` directory and download Mujoco210 using `wget`:
+## 2) Run Container
 
 ```bash
-mkdir -p ~/.mujoco
-wget https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz -P ~/.mujoco/
-cd ~/.mujoco
-tar -xzvf mujoco210-linux-x86_64.tar.gz
+docker run --rm -it \
+  --gpus all \
+  -v $HOME/dino_wm:/workspace \
+  -v $HOME/data:/data \
+  -v $HOME/checkpoints:/checkpoints \
+  -v $HOME/.mujoco:/root/.mujoco \
+  -w /workspace \
+  dino-wm-pointmaze
 ```
 
-Append the following lines to your `~/.bashrc`:
+## 3) Verify Runtime Environment
+
+Inside the container:
 
 ```bash
-# Mujoco Path. Replace `<username>` with your actual username if necessary.
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/<username>/.mujoco/mujoco210/bin
-
-# NVIDIA Library Path (if using NVIDIA GPUs)
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
+python -c "import wandb; print(wandb.__version__)"
+python -c "import mujoco_py; print('mujoco_py ok')"
+echo $DATASET_DIR
+echo $LD_LIBRARY_PATH
 ```
 
-Reload your shell configuration to apply the environment variable changes:
+Expected:
+- `DATASET_DIR=/data`
+- MuJoCo path included in `LD_LIBRARY_PATH`
+
+## 4) Fair Benchmark Pipeline (Train + Plan)
+
+Compare HF encoders vs DINOv2 on both training and planning.
+
+### 4.1 Models Included
+
+- DINOv2: `encoder=dino` (default large: `dinov2_vitl14`)
+- HF: `encoder=vjepa2`
+- HF: `encoder=dinov3`
+- HF: `encoder=dinotok`
+- HF: `encoder=vfm_vae`
+
+HF model IDs can be overridden with env vars:
+
+- `VJEPA2_MODEL_ID`
+- `DINOV3_MODEL_ID`
+- `DINOTOK_MODEL_ID`
+- `VFMVAE_MODEL_ID`
+
+### 4.2 Train Comparison Runs
+
+Use the fair preset (`train_fair_compare.yaml`) to fix key settings across runs:
+
+- same seed / epochs
+- same `concat_dim`, `num_hist`, `num_pred`
+- fixed predictor internal width (`predictor.model_dim=1024`)
 
 ```bash
-source ~/.bashrc
+# DINOv2 (large)
+python train.py --config-name train_fair_compare encoder=dino model_name=cmp_dinov2_l
+
+# HF encoders
+python train.py --config-name train_fair_compare encoder=vjepa2 model_name=cmp_vjepa2_l
+python train.py --config-name train_fair_compare encoder=dinov3 model_name=cmp_dinov3_l
+python train.py --config-name train_fair_compare encoder=dinotok model_name=cmp_dinotok_l
+python train.py --config-name train_fair_compare encoder=vfm_vae model_name=cmp_vfmvae_l
 ```
 
-## 2. Configure Data and Checkpoints
-
-Set dataset path:
-
-```bash
-export DATASET_DIR=/path/to/data
-```
-
-Expected dataset layout:
+Training checkpoints are written to:
 
 ```text
-data/
-  pusht_noise/
+/checkpoints/outputs/<model_name>
 ```
 
-Update checkpoint base path in plan config:
-- `conf/plan_pusht.yaml`: set `ckpt_base_path` to your checkpoints root.
+Trainer logs parameter counts at startup:
 
-## 3. Reproduce Planning with Pretrained PushT Checkpoint
+- `params/encoder_total`, `params/encoder_trainable`
+- `params/predictor_total`, `params/predictor_trainable`
+- `params/model_total`, `params/model_trainable`
+
+### 4.3 Plan Comparison Runs
+
+Run planning on each trained checkpoint with the same planning config:
 
 ```bash
-python plan.py --config-name plan_pusht.yaml model_name=pusht
+python plan.py --config-name plan_point_maze.yaml model_name=cmp_dinov2_l
+python plan.py --config-name plan_point_maze.yaml model_name=cmp_vjepa2_l
+python plan.py --config-name plan_point_maze.yaml model_name=cmp_dinov3_l
+python plan.py --config-name plan_point_maze.yaml model_name=cmp_dinotok_l
+python plan.py --config-name plan_point_maze.yaml model_name=cmp_vfmvae_l
 ```
 
-This verifies:
-- MuJoCo runtime
-- dataset path
-- checkpoint loading
-- end-to-end planning
+Planning outputs are saved to:
 
-Planning outputs are written to `plan_outputs/`.
-
-## 4. Retrain Baseline (if needed)
-
-```bash
-python train.py --config-name train.yaml env=pusht frameskip=5 num_hist=3
+```text
+/workspace/plan_outputs
 ```
 
-Checkpoints are saved under:
+### 4.4 Fairness Checklist (Important)
 
-`<ckpt_base_path>/outputs/<model_name>`
+Keep the following fixed when comparing models:
 
-## 5. Train Each Representation Variant
-
-Use the same training command and only switch encoder config:
-
-```bash
-# DINOv2 baseline
-python train.py --config-name train.yaml env=pusht encoder=dino
-
-# V-JEPA 2
-python train.py --config-name train.yaml env=pusht encoder=vjepa2
-
-# DINOv3
-python train.py --config-name train.yaml env=pusht encoder=dinov3
-
-# DINO-Tok
-python train.py --config-name train.yaml env=pusht encoder=dinotok
-
-# VFM-VAE
-python train.py --config-name train.yaml env=pusht encoder=vfm_vae
-```
-
-Note: if a model hub identifier changes, update `model_name` field in the corresponding file under `conf/encoder/`.
-
-## 6. Plan with Trained Checkpoints
-
-```bash
-python plan.py --config-name plan_pusht.yaml model_name=<your_model_name>
-```
+- training config: `train_fair_compare.yaml`
+- planning config: `plan_point_maze.yaml`
+- planner, `goal_source`, `goal_H`, `seed`, `n_evals`
+- dataset path and split
 
 ## Citation
 
-```bibtex
+```text
 @misc{zhou2024dinowmworldmodelspretrained,
-      title={DINO-WM: World Models on Pre-trained Visual Features enable Zero-shot Planning},
-      author={Gaoyue Zhou and Hengkai Pan and Yann LeCun and Lerrel Pinto},
-      year={2024},
-      eprint={2411.04983},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO},
-      url={https://arxiv.org/abs/2411.04983}
+    title={DINO-WM: World Models on Pre-trained Visual Features enable Zero-shot Planning},
+    author={Gaoyue Zhou and Hengkai Pan and Yann LeCun and Lerrel Pinto},
+    year={2024},
+    eprint={2411.04983},
+    archivePrefix={arXiv},
+    primaryClass={cs.RO},
+    url={https://arxiv.org/abs/2411.04983},
 }
 ```

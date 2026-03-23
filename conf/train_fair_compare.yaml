@@ -1,0 +1,23 @@
+defaults:
+  - train
+  - _self_
+
+# Fair-comparison preset for encoder backbone benchmarking.
+# Use with: python train.py --config-name train_fair_compare ...
+
+training:
+  seed: 42
+  epochs: 100
+
+# Keep transition setup fixed across runs.
+concat_dim: 1
+num_hist: 3
+num_pred: 1
+
+# Keep predictor capacity fixed across runs.
+predictor:
+  model_dim: 1024
+
+# Match DINOv2 default scale to the HF "vitl16" family.
+encoder:
+  name: dinov2_vitl14

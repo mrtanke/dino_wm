@@ -213,7 +213,6 @@ class PlanWorkspace:
             rand_init_state, rand_goal_state = self.env.sample_random_init_goal_states(
                 self.eval_seed
             )
-
             obs_0, state_0 = self.env.prepare(self.eval_seed, rand_init_state)
             obs_g, state_g = self.env.prepare(self.eval_seed, rand_goal_state)
 
@@ -455,6 +454,11 @@ def planning_main(cfg_dict):
         Path(model_path) / "checkpoints" / f"model_{cfg_dict['model_epoch']}.pth"
     )
     model = load_model(model_ckpt, model_cfg, num_action_repeat, device=device)
+
+    if model_cfg.env.name != "point_maze":
+        raise ValueError(
+            f"Only point_maze is supported in this workflow, got: {model_cfg.env.name}"
+        )
 
     env = SubprocVectorEnv(
         [
