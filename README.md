@@ -1,4 +1,4 @@
-# DINO-WM PointMaze Workflow
+## DINO-WM Representations Study
 
 This repo is now configured for a PointMaze-only workflow.
 
@@ -7,7 +7,7 @@ Removed from the default workflow:
 - wall_single
 - deformable environments
 
-## Container Layout
+### Container Layout
 
 Expected mounted paths in the container:
 - repo: `/workspace`
@@ -20,7 +20,7 @@ The configs are aligned with this layout:
 - `conf/plan.yaml`: `ckpt_base_path=/checkpoints`
 - `conf/plan_point_maze.yaml`: `ckpt_base_path=/checkpoints`
 
-## 1) Build Docker Image
+## 1 Build Docker Image
 
 From local repo directory:
 
@@ -28,7 +28,7 @@ From local repo directory:
 docker build -t dino-wm-pointmaze .
 ```
 
-## 2) Run Container
+## 2 Run Container
 
 ```bash
 docker run --rm -it \
@@ -41,7 +41,7 @@ docker run --rm -it \
   dino-wm-pointmaze
 ```
 
-## 3) Verify Runtime Environment
+## 3 Verify Runtime Environment
 
 Inside the container:
 
@@ -56,42 +56,42 @@ Expected:
 - `DATASET_DIR=/data`
 - MuJoCo path included in `LD_LIBRARY_PATH`
 
-## 4) Fair Benchmark Pipeline (Train + Plan)
+## 4 Benchmark Pipeline (Train + Plan)
 
-Compare HF encoders vs DINOv2 on both training and planning.
+Compare DINOv2 vs four different encoders on both training and planning.
 
 ### 4.1 Models Included
 
-- DINOv2: `encoder=dino` (default large: `dinov2_vitl14`)
-- HF: `encoder=vjepa2`
-- HF: `encoder=dinov3`
-- HF: `encoder=dinotok`
-- HF: `encoder=vfm_vae`
-
-HF model IDs can be overridden with env vars:
-
-- `VJEPA2_MODEL_ID`
-- `DINOV3_MODEL_ID`
-- `DINOTOK_MODEL_ID`
-- `VFMVAE_MODEL_ID`
+- DINOv2: `encoder=dino` (default small: `dinov2_vits14`)
+- `encoder=vjepa2`
+- `encoder=dinov3`
+- `encoder=dinotok`
+- `encoder=vfm_vae`
 
 ### 4.2 Train Comparison Runs
 
 Use the fair preset (`train_fair_compare.yaml`) to fix key settings across runs:
 
-- same seed / epochs
+- same seed / epochs (10 epochs)
 - same `concat_dim`, `num_hist`, `num_pred`
 - fixed predictor internal width (`predictor.model_dim=1024`)
+- predictor-only training by default (`has_decoder=False`, `model.train_decoder=False`)
 
 ```bash
-# DINOv2 (large)
-python train.py --config-name train_fair_compare encoder=dino model_name=cmp_dinov2_l
+# DINOv2 (base)
+python train.py --config-name train_fair_compare encoder=dino model_name=cmp_dinov2_s
 
-# HF encoders
-python train.py --config-name train_fair_compare encoder=vjepa2 model_name=cmp_vjepa2_l
-python train.py --config-name train_fair_compare encoder=dinov3 model_name=cmp_dinov3_l
-python train.py --config-name train_fair_compare encoder=dinotok model_name=cmp_dinotok_l
-python train.py --config-name train_fair_compare encoder=vfm_vae model_name=cmp_vfmvae_l
+# V-JEPA 2
+python train.py --config-name train_fair_compare encoder=vjepa2 model_name=cmp_vjepa2_s
+
+# DINOv3
+python train.py --config-name train_fair_compare encoder=dinov3 model_name=cmp_dinov3_s
+
+# DINO-Tok
+python train.py --config-name train_fair_compare encoder=dinotok model_name=cmp_dinotok_s
+
+# VFM-VAE
+python train.py --config-name train_fair_compare encoder=vfm_vae model_name=cmp_vfmvae_s
 ```
 
 Training checkpoints are written to:
@@ -110,12 +110,15 @@ Trainer logs parameter counts at startup:
 
 Run planning on each trained checkpoint with the same planning config:
 
+Note: with predictor-only training, planning metrics still run normally; decoder-based rollout video comparisons are skipped.
+
 ```bash
-python plan.py --config-name plan_point_maze.yaml model_name=cmp_dinov2_l
-python plan.py --config-name plan_point_maze.yaml model_name=cmp_vjepa2_l
-python plan.py --config-name plan_point_maze.yaml model_name=cmp_dinov3_l
-python plan.py --config-name plan_point_maze.yaml model_name=cmp_dinotok_l
-python plan.py --config-name plan_point_maze.yaml model_name=cmp_vfmvae_l
+# DINOv2 (base)
+python plan.py --config-name plan_point_maze.yaml model_name=cmp_dinov2_s
+python plan.py --config-name plan_point_maze.yaml model_name=cmp_vjepa2_s
+python plan.py --config-name plan_point_maze.yaml model_name=cmp_dinov3_s
+python plan.py --config-name plan_point_maze.yaml model_name=cmp_dinotok_s
+python plan.py --config-name plan_point_maze.yaml model_name=cmp_vfmvae_s
 ```
 
 Planning outputs are saved to:

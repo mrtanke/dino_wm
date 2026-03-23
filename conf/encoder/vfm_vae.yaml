@@ -1,5 +1,5 @@
 _target_: models.hf_encoders.VFMVAEEncoder
-model_name_or_path: ${oc.env:VFMVAE_MODEL_ID,facebook/vfm-vae-vitl16}
+model_name_or_path: ${oc.env:VFMVAE_MODEL_ID,facebook/vfm-vae-vits16}
 token_pool: patch
 feature_key: last_hidden_state
 drop_cls_token: true

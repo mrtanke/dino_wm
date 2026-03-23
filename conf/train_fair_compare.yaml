@@ -7,7 +7,7 @@ defaults:
 
 training:
   seed: 42
-  epochs: 100
+  epochs: 10
 
 # Keep transition setup fixed across runs.
 concat_dim: 1
@@ -18,6 +18,6 @@ num_pred: 1
 predictor:
   model_dim: 1024
 
-# Match DINOv2 default scale to the HF "vitl16" family.
+# Use the small DINOv2 backbone for faster training.
 encoder:
-  name: dinov2_vitl14
+  name: dinov2_vits14

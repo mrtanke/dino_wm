@@ -1,4 +1,49 @@
-__pycache__
-*.pyc
-outputs
-plan_outputs
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build/distribution artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test, type-check, and tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments and local Python config
+.venv/
+venv/
+env/
+.python-version
+
+# Notebook and editor artifacts
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Logs and local runtime files
+*.log
+wandb/
+
+# Generated training/planning outputs
+outputs/
+plan_outputs/
+
+# Local data/checkpoints mounts (container workflow)
+checkpoints/
+data/
+
+# Environment files with local secrets/settings
+.env
+.env.*
