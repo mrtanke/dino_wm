@@ -1,5 +1,5 @@
 _target_: models.hf_encoders.VJEPA2Encoder
-model_name_or_path: ${oc.env:VJEPA2_MODEL_ID,facebook/vjepa2-vits16}
+model_name_or_path: ${oc.env:VJEPA2_MODEL_ID,facebook/vjepa2-vitl-fpc64-256}
 token_pool: patch
 feature_key: last_hidden_state
 drop_cls_token: true

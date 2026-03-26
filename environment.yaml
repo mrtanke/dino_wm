@@ -115,7 +115,7 @@ dependencies:
       - gym==0.23.1
       - gym-notices==0.0.8
       - h5py==3.11.0
-      - huggingface-hub==0.23.2
+      - huggingface-hub==0.36.2
       - hydra-core==1.2.0
       - hydra-submitit-launcher==1.2.0
       - identify==2.5.36
@@ -257,7 +257,7 @@ dependencies:
       - thop==0.1.1-2209072238
       - threadpoolctl==3.5.0
       - tifffile==2024.5.22
-      - tokenizers==0.12.1
+      - tokenizers==0.21.4
       - toml==0.10.2
       - tomli==2.0.1
       - toolz==0.12.1
@@ -265,7 +265,7 @@ dependencies:
       - torchvision==0.18.0
       - tqdm==4.66.4
       - traitlets==5.14.3
-      - transformers==4.21.1
+      - transformers==4.53.3
       - trimesh==4.4.0
       - triton==2.3.0
       - typeguard==2.13.3

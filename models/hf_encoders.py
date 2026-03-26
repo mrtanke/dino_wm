@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torchvision
+import inspect
+from huggingface_hub import snapshot_download
 from transformers import AutoModel
 
 
@@ -25,11 +27,24 @@ class HFAutoVisionEncoder(nn.Module):
         self.token_pool = token_pool
         self.feature_key = feature_key
         self.drop_cls_token = drop_cls_token
+        resolved_model_path = model_name_or_path
+        if "/" in model_name_or_path:
+            # Resolve repo IDs to concrete local snapshot paths. This avoids
+            # repo-id cache lookup issues with some hub/transformers version combinations.
+            try:
+                resolved_model_path = snapshot_download(repo_id=model_name_or_path)
+            except Exception:
+                resolved_model_path = snapshot_download(
+                    repo_id=model_name_or_path,
+                    local_files_only=True,
+                )
 
         self.base_model = AutoModel.from_pretrained(
-            model_name_or_path,
+            resolved_model_path,
             trust_remote_code=trust_remote_code,
+            local_files_only=resolved_model_path != model_name_or_path,
         )
+        self._forward_params = set(inspect.signature(self.base_model.forward).parameters.keys())
 
         hidden_size = getattr(self.base_model.config, "hidden_size", None)
         if hidden_size is None:
@@ -66,7 +81,21 @@ class HFAutoVisionEncoder(nn.Module):
         if self.normalize is not None:
             x = self.normalize(x)
 
-        outputs = self.base_model(pixel_values=x)
+        if "pixel_values" in self._forward_params:
+            outputs = self.base_model(pixel_values=x)
+        elif "pixel_values_videos" in self._forward_params:
+            # VJEPA2 expects 5D input [B, T, C, H, W]. For single-frame training,
+            # tile the frame along time to satisfy tubelet-based video patching.
+            tubelet = int(getattr(self.base_model.config, "tubelet_size", 2))
+            if x.ndim == 4:
+                x_video = x.unsqueeze(1).repeat(1, max(2, tubelet), 1, 1, 1)
+            elif x.ndim == 5:
+                x_video = x
+            else:
+                raise ValueError(f"Unexpected VJEPA2 input shape: {tuple(x.shape)}")
+            outputs = self.base_model(pixel_values_videos=x_video, skip_predictor=True)
+        else:
+            outputs = self.base_model(x)
         feat = self._extract_features(outputs)
 
         if feat.ndim == 2:
@@ -87,16 +116,19 @@ class HFAutoVisionEncoder(nn.Module):
 
 class VJEPA2Encoder(HFAutoVisionEncoder):
     def __init__(self, **kwargs):
+        kwargs.pop("name", None)  # Remove name if it exists in kwargs to avoid duplicate argument error
         super().__init__(name="vjepa2", **kwargs)
 
 
 class DINOv3Encoder(HFAutoVisionEncoder):
     def __init__(self, **kwargs):
+        kwargs.pop("name", None)  # Remove name if it exists in kwargs to avoid duplicate argument error
         super().__init__(name="dinov3", **kwargs)
 
 
 class DINOTokEncoder(HFAutoVisionEncoder):
     def __init__(self, **kwargs):
+        kwargs.pop("name", None)  # Remove name if it exists in kwargs to avoid duplicate argument error
         super().__init__(name="dinotok", **kwargs)
 
 

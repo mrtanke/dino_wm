@@ -17,7 +17,3 @@ num_pred: 1
 # Keep predictor capacity fixed across runs.
 predictor:
   model_dim: 1024
-
-# Use the small DINOv2 backbone for faster training.
-encoder:
-  name: dinov2_vits14
