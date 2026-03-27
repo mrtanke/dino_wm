@@ -1,7 +1,9 @@
 _target_: models.hf_encoders.VFMVAEEncoder
-model_name_or_path: ${oc.env:VFMVAE_MODEL_ID,facebook/vfm-vae-vits16}
+model_name_or_path: google/siglip-base-patch16-224
 token_pool: patch
 feature_key: last_hidden_state
-drop_cls_token: true
+drop_cls_token: false
 trust_remote_code: true
-normalize_imagenet: true
+normalize_imagenet: false
+normalize_mean: [0.5, 0.5, 0.5]
+normalize_std: [0.5, 0.5, 0.5]

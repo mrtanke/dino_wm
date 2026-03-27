@@ -109,6 +109,9 @@ python train.py --config-name train_fair_compare encoder=dinov3 model_name=cmp_d
 python train.py --config-name train_fair_compare encoder=dinotok model_name=cmp_dinotok_s
 
 # VFM-VAE
+# Separate VFM-VAE adaptation:
+# We use the VFM backbone path from the VFM-VAE project family (default: SigLIP2).
+# Smallest tested encoder option for DINO-WM is google/siglip-base-patch16-224.
 python train.py --config-name train_fair_compare encoder=vfm_vae model_name=cmp_vfmvae_s
 ```
 
