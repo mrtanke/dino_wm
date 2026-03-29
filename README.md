@@ -76,14 +76,12 @@ Expected:
 
 ## 4 Benchmark Pipeline (Train + Plan)
 
-Compare DINOv2 vs four different encoders on both training and planning.
+Compare the three supported encoders on both training and planning.
 
 ### 4.1 Models Included
 
 - DINOv2: `encoder=dino` (default small: `dinov2_vits14`)
 - `encoder=vjepa2`
-- `encoder=dinov3`
-- `encoder=dinotok`
 - `encoder=vfm_vae`
 
 ### 4.2 Train Comparison Runs
@@ -101,12 +99,6 @@ python train.py --config-name train_fair_compare encoder=dino model_name=cmp_din
 
 # V-JEPA 2
 python train.py --config-name train_fair_compare encoder=vjepa2 model_name=cmp_vjepa2_s
-
-# DINOv3
-python train.py --config-name train_fair_compare encoder=dinov3 model_name=cmp_dinov3_s
-
-# DINO-Tok
-python train.py --config-name train_fair_compare encoder=dinotok model_name=cmp_dinotok_s
 
 # VFM-VAE
 # Separate VFM-VAE adaptation:
@@ -137,8 +129,6 @@ Note: with predictor-only training, planning metrics still run normally; decoder
 # DINOv2 (base)
 python plan.py --config-name plan_point_maze.yaml model_name=cmp_dinov2_s
 python plan.py --config-name plan_point_maze.yaml model_name=cmp_vjepa2_s
-python plan.py --config-name plan_point_maze.yaml model_name=cmp_dinov3_s
-python plan.py --config-name plan_point_maze.yaml model_name=cmp_dinotok_s
 python plan.py --config-name plan_point_maze.yaml model_name=cmp_vfmvae_s
 ```
 

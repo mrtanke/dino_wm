@@ -187,18 +187,6 @@ class VJEPA2Encoder(HFAutoVisionEncoder):
         super().__init__(name="vjepa2", **kwargs)
 
 
-class DINOv3Encoder(HFAutoVisionEncoder):
-    def __init__(self, **kwargs):
-        kwargs.pop("name", None)  # Remove name if it exists in kwargs to avoid duplicate argument error
-        super().__init__(name="dinov3", **kwargs)
-
-
-class DINOTokEncoder(HFAutoVisionEncoder):
-    def __init__(self, **kwargs):
-        kwargs.pop("name", None)  # Remove name if it exists in kwargs to avoid duplicate argument error
-        super().__init__(name="dinotok", **kwargs)
-
-
 class VFMVAEEncoder(HFAutoVisionEncoder):
     def __init__(self, **kwargs):
         # VFM-VAE uses a VFM backbone (default in paper/repo: SigLIP2) for
